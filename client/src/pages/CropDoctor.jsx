@@ -43,7 +43,7 @@ const CropDoctor = () => {
       } else if (errMsg?.includes('quota') || err.response?.status === 429) {
         displayMsg = '⚠️ API quota exceeded. Please wait a while or check your billing.';
       } else if (err.code === 'ECONNREFUSED' || err.message?.includes('Network')) {
-        displayMsg = '⚠️ Cannot connect to server. Make sure the backend is running on port 5000.';
+        displayMsg = '⚠️ Cannot connect to server. Please check your connection and try again.';
       } else if (errMsg) {
         displayMsg = errMsg;
       }
