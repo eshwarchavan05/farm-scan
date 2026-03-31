@@ -1,0 +1,11 @@
+{
+  "name": "farmscan",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install-all": "cd server && npm install && cd ../client && npm install",
+    "build": "cd client && npm run build",
+    "start": "cd server && node index.js",
+    "render-build": "cd server && npm install && cd ../client && npm install && npm run build"
+  }
+}

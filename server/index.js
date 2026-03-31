@@ -29,10 +29,16 @@ app.get('/health', (req, res) => res.json({ status: 'FarmScan backend running �
 
 // Serve React frontend in production
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/build')));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/build/index.html'));
-  });
+  const buildPath = path.join(__dirname, '../client/build');
+  if (fs.existsSync(buildPath)) {
+    app.use(express.static(buildPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(buildPath, 'index.html'));
+    });
+  } else {
+    console.warn('⚠️  Client build not found at:', buildPath);
+    console.warn('   Run "cd client && npm run build" to create it.');
+  }
 }
 
 // Start server immediately — MongoDB is optional
