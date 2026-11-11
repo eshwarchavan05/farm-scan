@@ -7,6 +7,7 @@ const scanSchema = new mongoose.Schema({
   severity: { type: String },
   treatment: { type: String },
   healthy: { type: Boolean, default: false },
+  className: { type: String },
   createdAt: { type: Date, default: Date.now }
 });
 

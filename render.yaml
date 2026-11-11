@@ -7,3 +7,17 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: ML_SERVICE_URL
+        sync: false
+
+  - type: web
+    name: farmscan-ml
+    runtime: python
+    rootDir: ml-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 180 --graceful-timeout 30
+    envVars:
+      - key: MODEL_ID
+        value: neghani/plantvillage-mobilenetv2
+      - key: HF_HUB_DISABLE_SYMLINKS
+        value: "1"

@@ -3,52 +3,30 @@ const Scan = require('../models/Scan');
 const FormData = require('form-data');
 const fs = require('fs');
 
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
+
 const scanCrop = async (req, res) => {
+  const imagePath = req.file?.path;
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No image uploaded' });
     }
 
     const cropType = req.body.crop || 'unknown';
-    const imagePath = req.file.path;
+    const formData = new FormData();
+    formData.append('image', fs.createReadStream(imagePath), {
+      filename: req.file.originalname || 'crop.jpg',
+      contentType: req.file.mimetype || 'image/jpeg',
+    });
+    formData.append('crop', cropType);
 
-    let prediction;
+    const mlResponse = await axios.post(`${ML_SERVICE_URL}/predict`, formData, {
+      headers: formData.getHeaders(),
+      timeout: 90000,
+      maxContentLength: 15 * 1024 * 1024,
+    });
+    const prediction = mlResponse.data;
 
-    try {
-      // Send image directly to Flask ML service
-      const formData = new FormData();
-      formData.append('image', fs.createReadStream(imagePath), {
-        filename: req.file.originalname || 'crop.jpg',
-        contentType: req.file.mimetype || 'image/jpeg'
-      });
-      formData.append('crop', cropType);
-
-      const mlResponse = await axios.post(
-        `${process.env.ML_SERVICE_URL || 'http://localhost:8000'}/predict`,
-        formData,
-        { headers: formData.getHeaders(), timeout: 30000 }
-      );
-      prediction = mlResponse.data;
-    } catch (mlError) {
-      console.warn('ML service unavailable, using demo response:', mlError.message);
-      // Demo response when ML service is not running
-      prediction = {
-        disease: 'Early Blight',
-        scientific_name: 'Alternaria solani',
-        confidence: 94.2,
-        severity: 'High',
-        affected_area: '~35% of leaf',
-        spread: 'Wind, water splash',
-        treatment: 'Spray Mancozeb (2g/L) every 7 days. Remove infected leaves immediately. Avoid overhead watering. Apply copper-based fungicide as a preventive measure. Ensure proper plant spacing for air circulation.',
-        healthy: false,
-        demo: true
-      };
-    }
-
-    // Clean up temp file
-    try { fs.unlinkSync(imagePath); } catch (_) {}
-
-    // Save to DB silently (won't crash app if DB is down)
     try {
       const scan = new Scan({
         cropType,
@@ -56,19 +34,43 @@ const scanCrop = async (req, res) => {
         confidence: prediction.confidence,
         severity: prediction.severity,
         treatment: prediction.treatment,
-        healthy: prediction.healthy || false
+        healthy: prediction.healthy || false,
+        className: prediction.class_name,
       });
       await scan.save();
     } catch (dbErr) {
       console.warn('DB save skipped:', dbErr.message);
     }
 
-    res.json(prediction);
-
+    return res.json(prediction);
   } catch (err) {
     console.error('Scan error:', err.message);
-    res.status(500).json({ error: 'Scan failed. Please try again.' });
+    if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.code === 'ETIMEDOUT') {
+      return res.status(503).json({
+        error: 'Disease recognition service is unavailable. Start the ML service on port 8000 and try again.',
+      });
+    }
+    if (err.response?.data?.error) {
+      return res.status(err.response.status || 500).json({ error: err.response.data.error });
+    }
+    return res.status(500).json({ error: 'Scan failed. Please try again with a clearer leaf photo.' });
+  } finally {
+    if (imagePath) {
+      try { fs.unlinkSync(imagePath); } catch (_) {}
+    }
   }
 };
 
-module.exports = { scanCrop };
+const mlHealth = async (_req, res) => {
+  try {
+    const mlResponse = await axios.get(`${ML_SERVICE_URL}/health`, { timeout: 10000 });
+    return res.json({ backend: 'ok', ml: mlResponse.data });
+  } catch (err) {
+    return res.status(503).json({
+      backend: 'ok',
+      ml: { status: 'down', error: err.message },
+    });
+  }
+};
+
+module.exports = { scanCrop, mlHealth };

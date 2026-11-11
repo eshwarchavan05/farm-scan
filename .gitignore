@@ -3,9 +3,15 @@ node_modules/
 .env.*
 !.env.example
 venv/
+.venv/
+ml-service/sample.jpg
+ml-service/.venv/
 __pycache__/
 .DS_Store
 build/
 dist/
 *.log
 uploads/
+ml-service/model_cache/
+ml-service/model/*.h5
+ml-service/data/

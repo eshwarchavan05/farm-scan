@@ -66,24 +66,24 @@ Frontend runs on: https://farm-scan-sooty.vercel.app
 
 ### Step 4: Setup ML Service (Python + Flask)
 
+The disease recognizer downloads a pretrained 38-class PlantVillage MobileNetV2 on first start. No Kaggle dataset or local training is required.
+
 ```bash
 cd ml-service
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
-
-# Download PlantVillage dataset from Kaggle:
-# https://www.kaggle.com/datasets/abdallahalidev/plantvillage-dataset
-# Extract to ml-service/data/plantvillage/
-
-# Train the model (takes ~30-60 min):
-python download_model.py train ./data/plantvillage
-
-# Start the Flask server:
 python app.py
 ```
 
-ML service runs on: https://farmscan-ml.onrender.com
+ML service runs on `http://localhost:8000`.
 
-> **Note:** The app works in demo mode even without the ML model. It returns sample predictions until the model is loaded.
+- `GET /health` — model status
+- `GET /classes` — all 38 disease labels
+- `POST /predict` — form fields `image` (file) and optional `crop` (e.g. Tomato)
+
+First startup takes a few minutes while weights download. Later starts are fast.
 
 ---
 
@@ -131,7 +131,8 @@ node index.js
 1. New Web Service → same repo
 2. Set Root Directory: `ml-service`
 3. Set Runtime: Python 3
-4. Set Start Command: `gunicorn app:app --bind 0.0.0.0:8000`
+4. Set Start Command: `gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 180`
+5. Set `ML_SERVICE_URL` on the Node service to this ML URL
 
 > **Important:** After deploying backend on Render, replace all `https://farm-scan.onrender.com` in React pages with your Render backend URL before deploying to Vercel.
 
@@ -176,9 +177,9 @@ farmscan/
 
 ---
 
-## 🌾 Crop Diseases Supported (38 classes)
+## 🌾 Crop Diseases Supported (38 PlantVillage classes)
 
-Tomato (9), Potato (3), Corn/Maize (4), Apple (4), Grape (4), Pepper (2), Strawberry (2), Peach (2), Rice (2), Wheat (2) — trained on PlantVillage dataset.
+Tomato (10), Potato (3), Corn/Maize (4), Apple (4), Grape (4), Pepper (2), Strawberry (2), Peach (2), Cherry (2), Orange/citrus greening (1), Squash powdery mildew (1), plus healthy blueberry, raspberry, and soybean. Rice and wheat are not in this dataset.
 
 ---
 

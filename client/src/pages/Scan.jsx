@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLang } from '../i18n/LangContext';
 import BASE_URL from '../api';
 
-const CROPS = ['Tomato', 'Potato', 'Corn', 'Wheat', 'Rice', 'Apple', 'Grape', 'Pepper', 'Strawberry', 'Peach'];
+const CROPS = ['Tomato', 'Potato', 'Corn', 'Apple', 'Grape', 'Pepper', 'Strawberry', 'Peach', 'Cherry', 'Orange', 'Squash'];
 const SEVERITY_COLOR = { High: '#EF4444', Medium: '#F97316', Low: '#22C55E' };
 const SEVERITY_BG = { High: '#FEF2F2', Medium: '#FFF7ED', Low: '#F0FDF4' };
 
@@ -43,7 +43,7 @@ const Scan = () => {
       formData.append('image', image);
       formData.append('crop', crop);
       const res = await axios.post(`${BASE_URL}/api/scan`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }, timeout: 40000,
+        headers: { 'Content-Type': 'multipart/form-data' }, timeout: 90000,
       });
       setResult(res.data);
     } catch (err) {
@@ -299,9 +299,32 @@ const Scan = () => {
                     </div>
                   )}
 
-                  {result.demo && (
-                    <p style={{ fontSize: '11px', color: '#9CA3AF', textAlign: 'center', marginTop: '12px' }}>
-                      Demo mode — ML service not connected
+                  {result.alternatives?.length > 0 && (
+                    <div style={{ marginTop: '14px' }}>
+                      <p style={{ fontSize: '11px', fontWeight: '700', color: '#6B9E7E', marginBottom: '8px', letterSpacing: '0.4px' }}>
+                        OTHER POSSIBLE MATCHES
+                      </p>
+                      {result.alternatives.map((alt) => (
+                        <div key={alt.class_name} style={{
+                          display: 'flex', justifyContent: 'space-between', gap: '8px',
+                          fontSize: '13px', color: '#1E4D35', padding: '6px 0',
+                          borderBottom: '1px solid #F0FDF4',
+                        }}>
+                          <span>{alt.disease}</span>
+                          <span style={{ fontWeight: '700', color: '#16A34A' }}>{Math.round(alt.confidence)}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {result.uncertain && (
+                    <p style={{ fontSize: '12px', color: '#B45309', textAlign: 'center', marginTop: '12px', lineHeight: '1.5' }}>
+                      Low confidence — retake a close-up of one leaf in daylight.
+                    </p>
+                  )}
+                  {result.note && !result.uncertain && (
+                    <p style={{ fontSize: '12px', color: '#6B9E7E', textAlign: 'center', marginTop: '12px', lineHeight: '1.5' }}>
+                      {result.note}
                     </p>
                   )}
                 </motion.div>
